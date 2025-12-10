@@ -1,0 +1,135 @@
+# COMPREHENSIVE SECURITY RECONNAISSANCE MISSION
+Target: www.tradepmr.com (HackerOne Bug Bounty Authorized)
+
+## MISSION OBJECTIVE
+Conduct expert-level reconnaissance on tradepmr.com following responsible disclosure practices under the HackerOne bug bounty program authorization.
+
+## PHASE 1: PASSIVE INTELLIGENCE GATHERING
+
+### 1.1 Domain & Infrastructure Analysis
+- **DNS Enumeration**: Extract all DNS records (A, AAAA, MX, TXT, NS, SOA, CAA)
+- **Subdomain Discovery**: Identify all subdomains using:
+  - Certificate transparency logs (crt.sh, Censys)
+  - Search engine dorking (Google, Bing, Shodan)
+  - DNS brute-forcing wordlists
+  - Reverse DNS lookups
+- **ASN & IP Range Mapping**: Identify autonomous system numbers and associated IP blocks
+- **WHOIS Analysis**: Historical ownership, registrar info, contact details
+
+### 1.2 Technology Stack Fingerprinting
+- **Web Technologies**: Identify frameworks, CMS, programming languages
+- **Server Infrastructure**: Web servers, load balancers, CDN usage
+- **JavaScript Libraries**: Frontend frameworks, third-party scripts
+- **Security Headers**: Analyze CSP, HSTS, X-Frame-Options, etc.
+- **Cookies & Session Management**: Token patterns, security flags
+
+### 1.3 Digital Footprint Analysis
+- **Search Engine Reconnaissance**:
+  - Google Dorks: `site:tradepmr.com filetype:pdf/xlsx/doc`
+  - Exposed documents, backup files, configuration files
+  - Employee emails and organizational structure
+- **Code Repositories**: GitHub, GitLab, Bitbucket searches for:
+  - API keys, credentials, tokens
+  - Source code leaks
+  - Internal documentation
+- **Historical Data**: Wayback Machine snapshots for deprecated endpoints
+
+### 1.4 Third-Party Integrations
+- **API Endpoints**: Discover external service integrations
+- **OAuth/SSO Providers**: Authentication mechanisms
+- **Payment Gateways**: PCI-DSS relevant components
+- **Analytics & Tracking**: Google Analytics, marketing pixels
+
+## PHASE 2: ACTIVE RECONNAISSANCE
+
+### 2.1 Attack Surface Mapping
+- **Web Crawling**: Spider all accessible pages and endpoints
+- **Directory & File Discovery**: Common paths, admin panels, API docs
+- **Parameter Analysis**: Query parameters, POST data structures
+- **HTTP Method Testing**: OPTIONS, PUT, DELETE, TRACE, CONNECT
+- **API Endpoint Enumeration**: REST/GraphQL/SOAP interfaces
+
+### 2.2 Application Behavior Analysis
+- **Authentication Flows**: Login, registration, password reset mechanisms
+- **Authorization Logic**: Role-based access, permission boundaries
+- **Input Validation**: Forms, file uploads, search functions
+- **Error Messages**: Information disclosure through verbose errors
+- **Rate Limiting**: Brute force protections, API throttling
+
+### 2.3 Security Mechanism Identification
+- **WAF Detection**: CloudFlare, Akamai, AWS WAF signatures
+- **Bot Protection**: CAPTCHA, fingerprinting, behavioral analysis
+- **Encryption**: TLS/SSL versions, cipher suites, certificate validation
+- **CORS Policies**: Cross-origin resource sharing configurations
+
+## PHASE 3: VULNERABILITY SURFACE ANALYSIS
+
+### 3.1 Common Vulnerability Classes to Investigate
+- **Injection Flaws**: SQLi, XSS, XXE, SSRF, Command Injection
+- **Authentication Issues**: Session fixation, weak password policies, MFA bypass
+- **Authorization Flaws**: IDOR, privilege escalation, missing function-level access control
+- **Business Logic Errors**: Race conditions, price manipulation, workflow bypasses
+- **Security Misconfigurations**: Default credentials, exposed services, debug modes
+- **Data Exposure**: Sensitive information leakage, improper access controls
+- **CSRF & Clickjacking**: Cross-site request forgery, frame injection
+
+### 3.2 Financial Services-Specific Concerns
+Given tradepmr.com is in the financial sector:
+- **Transaction Integrity**: Order tampering, amount manipulation
+- **Account Takeover**: Multi-factor authentication bypass vectors
+- **PCI-DSS Compliance**: Payment card data handling
+- **Regulatory Compliance**: FINRA, SEC data protection requirements
+
+## PHASE 4: REPORTING & DOCUMENTATION
+
+### 4.1 Evidence Collection
+- **Screenshots**: Visual proof of findings
+- **HTTP Requests/Responses**: Complete traffic captures
+- **Proof of Concept**: Reproducible exploit demonstrations
+- **Impact Assessment**: Business risk and severity rating
+
+### 4.2 Responsible Disclosure
+- **HackerOne Submission**: Follow platform reporting guidelines
+- **Severity Classification**: CVSS scoring
+- **Remediation Suggestions**: Constructive fix recommendations
+- **Timeline**: Give appropriate time for patch development
+
+## TOOLS & METHODOLOGIES
+
+### Recommended Toolkit
+- **Subdomain Enumeration**: Amass, Sublist3r, Subfinder, Assetfinder
+- **Port Scanning**: Nmap, Masscan (with caution)
+- **Web Scanning**: Burp Suite, OWASP ZAP, Nuclei
+- **Directory Bruteforce**: ffuf, gobuster, dirsearch
+- **Technology Detection**: Wappalyzer, BuiltWith, WhatWeb
+- **SSL/TLS Analysis**: testssl.sh, SSLScan
+- **Git Monitoring**: GitRob, TruffleHog, GitLeaks
+
+### Operational Security
+- **Authorization Verification**: Confirm HackerOne program scope
+- **Rate Limiting Respect**: Avoid DoS conditions
+- **Data Handling**: No downloading of customer data
+- **Legal Boundaries**: Stay within defined scope and rules of engagement
+
+## DELIVERABLES
+
+1. **Comprehensive Asset Inventory**: All discovered domains, subdomains, IPs, services
+2. **Technology Stack Report**: Complete architecture documentation
+3. **Vulnerability Assessment**: Prioritized findings with evidence
+4. **Attack Surface Map**: Visual representation of entry points
+5. **Remediation Roadmap**: Actionable security improvements
+
+## ETHICAL GUIDELINES
+
+✓ Only test within authorized scope
+✓ Do not access, modify, or delete data
+✓ Report findings immediately through proper channels
+✓ Respect privacy and confidentiality
+✓ Follow HackerOne disclosure policies
+✗ Never exploit beyond proof-of-concept
+✗ Never share findings publicly before resolution
+✗ Never use findings for personal gain
+
+---
+
+**AUTHORIZATION REMINDER**: Ensure you have written confirmation of the HackerOne program authorization and that tradepmr.com explicitly lists this domain in their scope before proceeding with any active testing.
