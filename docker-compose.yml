@@ -1,0 +1,20 @@
+version: '3.8'
+
+services:
+  bug-bounty-agent:
+    build: .
+    container_name: bug-bounty-agent
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - MAX_ITERATIONS=15
+      - TIMEOUT=10
+    volumes:
+      - ./reports:/app/reports
+      - ./.env:/app/.env:ro
+    networks:
+      - scanning-network
+    restart: on-failure
+
+networks:
+  scanning-network:
+    driver: bridge
