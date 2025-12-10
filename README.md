@@ -1,6 +1,6 @@
 # Autonomous AI Bug Bounty Agent
 
-An expert-level, fully autonomous AI-powered web vulnerability scanner that uses OpenAI's GPT models to intelligently identify security vulnerabilities in web applications.
+An expert-level, fully autonomous AI-powered web vulnerability scanner that uses Google's Gemini 2.5 Flash model to intelligently identify security vulnerabilities in web applications.
 
 ## Features
 
@@ -33,7 +33,7 @@ An expert-level, fully autonomous AI-powered web vulnerability scanner that uses
 
 ### Requirements
 - Python 3.8+
-- OpenAI API Key (GPT-4 access recommended)
+- Google API Key (Gemini 2.5 Flash access required)
 - curl, nmap, and other common security tools (optional but recommended)
 
 ### Setup
@@ -58,7 +58,7 @@ pip install -r requirements.txt
 4. **Configure environment**
 ```bash
 cp .env.example .env
-# Edit .env and add your OpenAI API Key
+# Edit .env and add your Google API Key
 ```
 
 ## Usage
@@ -115,10 +115,10 @@ print(f"Report saved to: {report_file}")
    - Tests basic connectivity
 
 3. **AI-Driven Analysis Loop**
-   - Sends reconnaissance data to OpenAI GPT-4
-   - AI suggests next scanning steps based on context
-   - Executes suggested commands
-   - Analyzes outputs for vulnerability indicators
+    - Sends reconnaissance data to Google Gemini 2.5 Flash
+    - AI suggests next scanning steps based on context
+    - Executes suggested commands
+    - Analyzes outputs for vulnerability indicators
 
 4. **Vulnerability Detection**
    - Scans command output for critical keywords
@@ -148,14 +148,14 @@ Parse URL → Gather Initial Info → Loop:
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `OPENAI_API_KEY` | Your OpenAI API key | Required |
+| `GOOGLE_API_KEY` | Your Google API key for Gemini | Required |
 | `MAX_ITERATIONS` | Maximum scanning iterations | 15 |
 | `TIMEOUT` | Command execution timeout (seconds) | 10 |
 
 ### Example .env File
 
 ```
-OPENAI_API_KEY=sk-...your-api-key-here...
+GOOGLE_API_KEY=your-google-api-key-here
 MAX_ITERATIONS=15
 TIMEOUT=10
 ```
@@ -253,10 +253,10 @@ Immediate Actions Required:
 
 ## Troubleshooting
 
-### "OPENAI_API_KEY not set"
+### "GOOGLE_API_KEY not set"
 - Ensure `.env` file exists in the project root
-- Add your valid OpenAI API key to `.env`
-- Test with: `python -c "import os; from dotenv import load_dotenv; load_dotenv(); print(os.getenv('OPENAI_API_KEY'))"`
+- Add your valid Google API key to `.env`
+- Test with: `python -c "import os; from dotenv import load_dotenv; load_dotenv(); print(os.getenv('GOOGLE_API_KEY'))"`
 
 ### "Invalid URL format"
 - Ensure URL includes protocol: `https://example.com` (not just `example.com`)
@@ -268,8 +268,8 @@ Immediate Actions Required:
 - Verify target is accessible
 
 ### AI not suggesting good commands
-- Ensure GPT-4 model is available in your account
-- Check OpenAI API quotas and rate limits
+- Ensure Gemini 2.5 Flash model is available in your account
+- Check Google API quotas and rate limits
 - Verify API key has necessary permissions
 
 ## Advanced Usage

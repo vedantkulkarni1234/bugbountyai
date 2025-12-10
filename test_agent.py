@@ -80,7 +80,7 @@ class TestBugBountyAgent(unittest.TestCase):
     
     def setUp(self):
         """Set up test fixtures."""
-        with patch.dict('os.environ', {'OPENAI_API_KEY': 'test-key'}):
+        with patch.dict('os.environ', {'GOOGLE_API_KEY': 'test-key'}):
             self.agent = BugBountyAgent()
     
     def test_parse_url_valid(self):
@@ -125,11 +125,11 @@ class TestIntegration(unittest.TestCase):
     def test_scan_workflow(self, mock_ai):
         """Test the overall scanning workflow."""
         mock_ai.return_value = "curl -s https://example.com"
-        
-        with patch.dict('os.environ', {'OPENAI_API_KEY': 'test-key'}):
+
+        with patch.dict('os.environ', {'GOOGLE_API_KEY': 'test-key'}):
             agent = BugBountyAgent()
             agent.max_iterations = 1
-            
+
             # This would normally scan, but we're mocking the AI
             result = agent.parse_url("https://example.com")
             self.assertTrue(result)

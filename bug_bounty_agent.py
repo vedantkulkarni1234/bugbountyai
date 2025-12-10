@@ -22,7 +22,7 @@ class BugBountyAgent:
     An autonomous AI-powered bug bounty scanning agent that:
     1. Takes a website URL
     2. Performs reconnaissance using curl and other tools
-    3. Uses OpenAI's GPT to analyze outputs and generate next steps
+    3. Uses Google's Gemini to analyze outputs and generate next steps
     4. Iteratively searches for vulnerabilities
     5. Generates a comprehensive report
     """
@@ -30,11 +30,12 @@ class BugBountyAgent:
     def __init__(self):
         load_dotenv()
         
-        self.api_key = os.getenv("OPENAI_API_KEY")
+        self.api_key = os.getenv("GOOGLE_API_KEY")
         if not self.api_key:
-            raise ValueError("OPENAI_API_KEY environment variable not set")
+            raise ValueError("GOOGLE_API_KEY environment variable not set")
         
-        self.client = OpenAI(api_key=self.api_key)
+        genai.configure(api_key=self.api_key)
+        self.model = genai.GenerativeModel("gemini-2.5-flash")
         self.max_iterations = int(os.getenv("MAX_ITERATIONS", 15))
         self.timeout = int(os.getenv("TIMEOUT", 10))
         
@@ -111,29 +112,25 @@ class BugBountyAgent:
         return info
 
     def analyze_with_ai(self, context: str, instruction: str) -> str:
-        """Use OpenAI to analyze information and determine next steps."""
+        """Use Google Gemini to analyze information and determine next steps."""
         try:
-            response = self.client.chat.completions.create(
-                model="gpt-4o",
-                messages=[
-                    {
-                        "role": "system",
-                        "content": """You are an expert ethical hacker and bug bounty hunter. 
+            system_prompt = """You are an expert ethical hacker and bug bounty hunter. 
 Your role is to identify vulnerabilities in web applications through systematic testing.
 Respond with actionable commands and insights based on reconnaissance data.
 Focus on finding critical vulnerabilities like SQLi, RCE, SSRF, XSS, authentication bypass, etc.
 Always suggest commands that can be executed in a Linux terminal.
 Be thorough but efficient - prioritize critical vulnerability discovery."""
-                    },
-                    {
-                        "role": "user",
-                        "content": f"{instruction}\n\nContext:\n{context}"
-                    }
-                ],
-                temperature=0.7,
-                max_tokens=1000
+            
+            user_message = f"{system_prompt}\n\n{instruction}\n\nContext:\n{context}"
+            
+            response = self.model.generate_content(
+                user_message,
+                generation_config=genai.types.GenerationConfig(
+                    temperature=0.7,
+                    max_output_tokens=1000
+                )
             )
-            return response.choices[0].message.content
+            return response.text
         except Exception as e:
             print(f"⚠ AI analysis error: {e}")
             return ""
