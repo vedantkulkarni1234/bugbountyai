@@ -22,10 +22,10 @@ The Autonomous AI Bug Bounty Agent is a sophisticated vulnerability scanning sys
         ┌────────────────┼────────────────┐
         │                │                │
         ▼                ▼                ▼
-   ┌─────────┐    ┌──────────────┐  ┌─────────────┐
-   │ OpenAI  │    │  Shell Cmds  │  │   Utilities │
-   │   API   │    │  (curl, etc) │  │ (utils.py)  │
-   └─────────┘    └──────────────┘  └─────────────┘
+        ┌─────────┐    ┌──────────────┐  ┌─────────────┐
+        │ Google  │    │  Shell Cmds  │  │   Utilities │
+        │ Gemini  │    │  (curl, etc) │  │ (utils.py)  │
+        └─────────┘    └──────────────┘  └─────────────┘
 ```
 
 ## Module Architecture
@@ -49,7 +49,7 @@ Main module containing the `BugBountyAgent` class.
 **Responsibilities:**
 - URL parsing and validation
 - Command execution management
-- AI integration with OpenAI API
+- AI integration with Google Gemini API
 - Vulnerability pattern detection
 - Scan orchestration and iteration
 - Report generation
@@ -128,12 +128,12 @@ Unit and integration tests.
    └─ Port Testing
    ↓
 4. Iteration Loop (up to MAX_ITERATIONS)
-   ├─ Send reconnaissance data to OpenAI
-   ├─ Receive vulnerability scanning suggestions
-   ├─ Execute suggested commands
-   ├─ Analyze output for vulnerabilities
-   ├─ Check for critical vulnerability
-   └─ Update history and context
+    ├─ Send reconnaissance data to Google Gemini
+    ├─ Receive vulnerability scanning suggestions
+    ├─ Execute suggested commands
+    ├─ Analyze output for vulnerabilities
+    ├─ Check for critical vulnerability
+    └─ Update history and context
    ↓
 5. Report Generation
    ├─ Compile findings

@@ -11,9 +11,9 @@ load_dotenv()
 class Config:
     """Base configuration class."""
     
-    # OpenAI Configuration
-    OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-    OPENAI_MODEL = "gpt-4o"
+    # Google Gemini Configuration
+    GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
+    GEMINI_MODEL = "gemini-2.5-flash"
     
     # Scanning Configuration
     MAX_ITERATIONS = int(os.getenv("MAX_ITERATIONS", 15))

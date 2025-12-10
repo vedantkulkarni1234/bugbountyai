@@ -7,14 +7,14 @@
 pip install -r requirements.txt
 ```
 
-### Step 2: Configure OpenAI API Key
+### Step 2: Configure Google API Key
 ```bash
 cp .env.example .env
 ```
 
-Edit `.env` and add your OpenAI API key:
+Edit `.env` and add your Google API key:
 ```
-OPENAI_API_KEY=sk-...your-key...
+GOOGLE_API_KEY=your-google-api-key-here
 ```
 
 ## Running Your First Scan (5 minutes)
@@ -111,10 +111,10 @@ Command Used: curl -s 'https://example.com/search?q=...
 
 ## Troubleshooting
 
-### Problem: "OPENAI_API_KEY not set"
+### Problem: "GOOGLE_API_KEY not set"
 **Solution**: Check that `.env` file exists and contains your API key
 ```bash
-cat .env | grep OPENAI_API_KEY
+cat .env | grep GOOGLE_API_KEY
 ```
 
 ### Problem: "Invalid URL format"
@@ -163,12 +163,12 @@ python cli.py https://example.com --timeout 30
 
 ## API Key Setup
 
-### Getting Your OpenAI API Key
+### Getting Your Google API Key
 
-1. Visit https://platform.openai.com
+1. Visit https://aistudio.google.com
 2. Sign up or log in
 3. Go to API keys section
-4. Create a new secret key
+4. Create a new API key
 5. Copy the key to your `.env` file
 
 ### Verify Your Setup
@@ -177,7 +177,7 @@ python -c "
 import os
 from dotenv import load_dotenv
 load_dotenv()
-key = os.getenv('OPENAI_API_KEY')
+key = os.getenv('GOOGLE_API_KEY')
 if key:
     print('✓ API Key found!')
     print(f'  Key starts with: {key[:15]}...')

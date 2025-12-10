@@ -55,12 +55,12 @@ brew install curl nmap nikto dnsutils
 sudo apt-get install curl nmap nikto dnsutils whois
 ```
 
-### 4. OpenAI API Key
+### 4. Google API Key
 
-1. Visit https://platform.openai.com
+1. Visit https://aistudio.google.com
 2. Sign up or log in to your account
 3. Navigate to API keys section
-4. Click "Create new secret key"
+4. Click "Create API key"
 5. Copy the key securely
 6. Keep the key safe (don't share or commit to version control)
 
@@ -104,7 +104,7 @@ pip install -r requirements.txt
 
 **What gets installed:**
 - `requests==2.31.0` - HTTP library
-- `openai==1.3.0` - OpenAI API client
+- `google-generativeai==0.6.0` - Google Generative AI client
 - `python-dotenv==1.0.0` - Environment variable management
 - `dnspython==2.4.2` - DNS utilities
 
@@ -120,7 +120,7 @@ nano .env
 
 Edit the `.env` file:
 ```
-OPENAI_API_KEY=sk-...your-api-key-here...
+GOOGLE_API_KEY=your-google-api-key-here
 MAX_ITERATIONS=15
 TIMEOUT=10
 ```
@@ -168,7 +168,7 @@ cd test_scan
 python3 ../cli.py https://example.com --max-iterations 1
 
 # You should see scanning output
-# (It will fail if OPENAI_API_KEY is not set, which is expected)
+# (It will fail if GOOGLE_API_KEY is not set, which is expected)
 ```
 
 ## Docker Installation
@@ -191,7 +191,7 @@ docker build -t bug-bounty-agent .
 docker run --env-file .env -v "$(pwd)/reports:/app/reports" bug-bounty-agent https://example.com
 
 # Or with explicit API key
-docker run -e OPENAI_API_KEY=sk-... -v "$(pwd)/reports:/app/reports" bug-bounty-agent https://example.com
+docker run -e GOOGLE_API_KEY=your-key -v "$(pwd)/reports:/app/reports" bug-bounty-agent https://example.com
 ```
 
 ### Step 3: Docker Compose (Optional)
@@ -246,7 +246,7 @@ chmod +x cli.py
 python3 cli.py https://example.com
 ```
 
-### Issue: "ModuleNotFoundError: No module named 'openai'"
+### Issue: "ModuleNotFoundError: No module named 'google'"
 **Solution:**
 ```bash
 # Ensure virtual environment is activated
@@ -257,18 +257,18 @@ venv\Scripts\activate     # Windows
 pip install -r requirements.txt
 ```
 
-### Issue: "OPENAI_API_KEY not set"
+### Issue: "GOOGLE_API_KEY not set"
 **Solution:**
 ```bash
 # Check .env file exists
 ls -la .env
 
 # Check it contains the key
-grep OPENAI_API_KEY .env
+grep GOOGLE_API_KEY .env
 
 # If missing, edit the file
 nano .env
-# Add: OPENAI_API_KEY=sk-...your-key...
+# Add: GOOGLE_API_KEY=your-google-api-key-here
 ```
 
 ## Post-Installation Steps
@@ -290,7 +290,7 @@ chmod +x examples/*.py
 ### 3. Verify Dependencies
 
 ```bash
-pip list | grep -E "requests|openai|python-dotenv"
+pip list | grep -E "requests|google-generativeai|python-dotenv"
 ```
 
 ### 4. Test with Example
