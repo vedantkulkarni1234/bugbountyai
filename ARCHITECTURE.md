@@ -2,7 +2,7 @@
 
 ## System Overview
 
-The Autonomous AI Bug Bounty Agent is a sophisticated vulnerability scanning system that combines command execution with AI-driven analysis.
+The Autonomous AI Bug Bounty Agent features a sophisticated **Cognitive Architecture** (Planner-Executor-Critic) that mimics human pentester reasoning, combined with headless browser capabilities for JavaScript-aware scanning.
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -11,21 +11,29 @@ The Autonomous AI Bug Bounty Agent is a sophisticated vulnerability scanning sys
 └────────────────────────┬────────────────────────────────────────┘
                          │
 ┌────────────────────────▼────────────────────────────────────────┐
-│              Bug Bounty Agent Core                              │
-│                  (bug_bounty_agent.py)                          │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐          │
-│  │ Reconnaissance│  │ AI Analysis  │  │ Scanning     │          │
-│  │   Module     │  │   Module     │  │   Module     │          │
-│  └──────────────┘  └──────────────┘  └──────────────┘          │
+│            Bug Bounty Agent Core (bug_bounty_agent.py)          │
+│                                                                  │
+│  ┌────────────────┐  ┌────────────────┐  ┌─────────────────┐  │
+│  │ 🧠 PLANNER     │  │ ⚡ EXECUTOR     │  │ 🔍 CRITIC       │  │
+│  │                │  │                │  │                 │  │
+│  │ • Strategy     │→ │ • Execute Cmds │→ │ • Validate      │  │
+│  │ • Prioritize   │  │ • Collect Data │  │ • Confidence    │  │
+│  │ • Generate     │  │ • Track Results│  │ • Reasoning     │  │
+│  └────────────────┘  └────────────────┘  └─────────────────┘  │
+│                                                                  │
+│  ┌────────────────────────────────────────────────────────────┐│
+│  │ 🌐 Headless Browser (Playwright)                           ││
+│  │  • JavaScript Execution  • DOM Analysis  • Screenshots     ││
+│  └────────────────────────────────────────────────────────────┘│
 └────────────────────────┬────────────────────────────────────────┘
                          │
-        ┌────────────────┼────────────────┐
-        │                │                │
-        ▼                ▼                ▼
-        ┌─────────┐    ┌──────────────┐  ┌─────────────┐
-        │ Google  │    │  Shell Cmds  │  │   Utilities │
-        │ Gemini  │    │  (curl, etc) │  │ (utils.py)  │
-        └─────────┘    └──────────────┘  └─────────────┘
+        ┌────────────────┼────────────────┬──────────────┐
+        │                │                │              │
+        ▼                ▼                ▼              ▼
+    ┌─────────┐    ┌──────────┐    ┌──────────┐   ┌──────────┐
+    │ Google  │    │  Shell   │    │ Utilities│   │ Browser  │
+    │ Gemini  │    │  Cmds    │    │(utils.py)│   │ (Chromium)│
+    └─────────┘    └──────────┘    └──────────┘   └──────────┘
 ```
 
 ## Module Architecture
@@ -114,7 +122,20 @@ Dedicated utilities for rendering targets inside a headless Chromium browser.
 - Simulate basic user actions (scrolling, button clicks, text input)
 - Generate screenshots stored under `reports/browser/screenshots`
 
-### 6. **test_agent.py** - Test Suite
+### 6. **cognitive_agents.py** - Cognitive Architecture (NEW!)
+Implements the Planner-Executor-Critic architecture for intelligent scanning.
+
+**Key Classes:**
+- `PlannerAgent`: Strategic planning and vulnerability prioritization
+- `ExecutorAgent`: Command execution and data collection
+- `CriticAgent`: Validation and false positive reduction
+
+**Responsibilities:**
+- **Planner**: Analyze reconnaissance, create scanning strategy, generate commands
+- **Executor**: Safe command execution, output collection, history tracking
+- **Critic**: Two-pass validation (pattern + AI), confidence scoring, reasoning generation
+
+### 7. **test_agent.py** - Test Suite
 Unit and integration tests.
 
 **Test Classes:**
@@ -126,7 +147,7 @@ Unit and integration tests.
 
 ## Data Flow
 
-### Scanning Workflow
+### Scanning Workflow (Cognitive Mode)
 
 ```
 1. User Input
@@ -138,18 +159,40 @@ Unit and integration tests.
     ├─ DNS Lookup
     ├─ WHOIS Query
     ├─ Port Testing
-    └─ (Optional) Headless browser DOM/screenshot capture
+    └─ Headless Browser (Playwright)
+         ├─ JavaScript Execution
+         ├─ DOM Rendering
+         ├─ Screenshot Capture
+         ├─ Form Detection
+         └─ Console Monitoring
     ↓
-4. Iteration Loop (up to MAX_ITERATIONS)
-
-    ├─ Receive vulnerability scanning suggestions
-    ├─ Execute suggested commands
-    ├─ Analyze output for vulnerabilities
-    ├─ Check for critical vulnerability
-    └─ Update history and context
-   ↓
+4. Cognitive Loop (up to MAX_ITERATIONS)
+    │
+    ├─ 🧠 PLANNER AGENT
+    │   ├─ Analyze reconnaissance data
+    │   ├─ Create strategic plan
+    │   ├─ Prioritize vulnerabilities
+    │   └─ Generate targeted commands
+    │   ↓
+    ├─ ⚡ EXECUTOR AGENT
+    │   ├─ Execute commands from plan
+    │   ├─ Collect outputs
+    │   └─ Track execution history
+    │   ↓
+    └─ 🔍 CRITIC AGENT
+        ├─ Pattern-based validation
+        ├─ AI-based validation
+        ├─ Confidence scoring
+        └─ False positive filtering
+        │
+        └─ [Vulnerability Confirmed?]
+            ├─ Yes → Report & Stop
+            └─ No → Next Iteration
+    ↓
 5. Report Generation
-   ├─ Compile findings
+   ├─ Compile findings with confidence scores
+   ├─ Include AI reasoning
+   ├─ Add screenshots (if available)
    ├─ Generate recommendations
    └─ Save to file
    ↓
@@ -222,9 +265,11 @@ Iteration 13+: Exploitation attempts
 
 ### Environment Variables
 ```
-OPENAI_API_KEY      - Required: OpenAI API key
-MAX_ITERATIONS      - Optional: Max scan iterations (default: 15)
-TIMEOUT             - Optional: Command timeout in seconds (default: 10)
+GOOGLE_API_KEY           - Required: Google Gemini API key
+MAX_ITERATIONS           - Optional: Max scan iterations (default: 15)
+TIMEOUT                  - Optional: Command timeout in seconds (default: 10)
+ENABLE_HEADLESS_BROWSER  - Optional: Enable Playwright browser (default: true)
+ENABLE_COGNITIVE_MODE    - Optional: Enable cognitive architecture (default: true)
 ```
 
 ### Configuration Hierarchy
