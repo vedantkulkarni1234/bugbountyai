@@ -36,7 +36,8 @@ class PlannerAgent:
         domain: str, 
         domain_info: Dict[str, Any], 
         browser_data: Dict[str, Any],
-        iteration: int
+        iteration: int,
+        discovered_endpoints: List[str] = None
     ) -> Dict[str, Any]:
         """
         Analyze the target and create a strategic scanning plan.
@@ -46,6 +47,7 @@ class PlannerAgent:
             domain_info: Reconnaissance data (headers, DNS, etc.)
             browser_data: Headless browser intelligence
             iteration: Current iteration number
+            discovered_endpoints: Endpoints discovered from JS analysis
             
         Returns:
             Dictionary containing scanning strategy with phases and priorities
@@ -53,15 +55,15 @@ class PlannerAgent:
         print(f"\n[Planner Agent] Creating strategic plan for {domain}...")
         
         # Prepare context for AI planning
-        context = self._prepare_planning_context(domain_info, browser_data)
+        context = self._prepare_planning_context(domain_info, browser_data, discovered_endpoints)
         
         # Create strategic plan based on iteration phase
         if iteration == 1:
-            plan = self._create_initial_plan(domain, context)
+            plan = self._create_initial_plan(domain, context, discovered_endpoints)
         elif iteration <= 5:
-            plan = self._create_exploration_plan(domain, context, iteration)
+            plan = self._create_exploration_plan(domain, context, iteration, discovered_endpoints)
         else:
-            plan = self._create_deep_scan_plan(domain, context, iteration)
+            plan = self._create_deep_scan_plan(domain, context, iteration, discovered_endpoints)
         
         self.plans.append(plan)
         self._display_plan(plan)
@@ -71,7 +73,8 @@ class PlannerAgent:
     def _prepare_planning_context(
         self, 
         domain_info: Dict[str, Any], 
-        browser_data: Dict[str, Any]
+        browser_data: Dict[str, Any],
+        discovered_endpoints: List[str] = None
     ) -> str:
         """Prepare context for AI planning."""
         context_parts = []
@@ -100,16 +103,38 @@ class PlannerAgent:
             if dom:
                 context_parts.append(f"- DOM Size: {len(dom)} characters")
         
+        # JavaScript analysis results
+        if domain_info.get("js_analysis"):
+            js_info = domain_info["js_analysis"]
+            context_parts.append("\nJavaScript Analysis:")
+            context_parts.append(f"- Secrets Found: {js_info.get('secrets_found', 0)}")
+            context_parts.append(f"- Hidden Endpoints Found: {js_info.get('endpoints_found', 0)}")
+        
+        # Discovered endpoints
+        if discovered_endpoints:
+            context_parts.append("\nDiscovered Hidden Endpoints (from JS):")
+            for endpoint in discovered_endpoints[:5]:
+                context_parts.append(f"  • {endpoint}")
+            if len(discovered_endpoints) > 5:
+                context_parts.append(f"  ... and {len(discovered_endpoints) - 5} more")
+        
         return "\n".join(context_parts)
     
-    def _create_initial_plan(self, domain: str, context: str) -> Dict[str, Any]:
+    def _create_initial_plan(self, domain: str, context: str, discovered_endpoints: List[str] = None) -> Dict[str, Any]:
         """Create initial reconnaissance plan."""
+        endpoint_context = ""
+        if discovered_endpoints:
+            endpoint_context = f"\n\nIMPORTANT: Hidden API endpoints discovered from JavaScript analysis:\n"
+            for ep in discovered_endpoints[:3]:
+                endpoint_context += f"- {ep}\n"
+            endpoint_context += "Prioritize testing these endpoints for vulnerabilities!"
+        
         prompt = f"""You are an expert penetration testing strategist. Analyze this target and create a focused scanning strategy.
 
 Target: {domain}
 
 Reconnaissance Data:
-{context}
+{context}{endpoint_context}
 
 Create a strategic plan with:
 1. Target Classification (technology stack, framework, CMS)
@@ -147,13 +172,20 @@ Be specific and actionable."""
         self, 
         domain: str, 
         context: str, 
-        iteration: int
+        iteration: int,
+        discovered_endpoints: List[str] = None
     ) -> Dict[str, Any]:
         """Create exploration phase plan."""
+        endpoint_hint = ""
+        if discovered_endpoints and iteration <= 3:
+            endpoint_hint = f"\n\nTest these discovered endpoints:\n"
+            for ep in discovered_endpoints[:2]:
+                endpoint_hint += f"- {ep}\n"
+        
         prompt = f"""Continue vulnerability scanning strategy for {domain} (Iteration {iteration}).
 
 Previous findings summary:
-{context[:1000]}
+{context[:1000]}{endpoint_hint}
 
 What should we test next? Suggest 2-3 specific scanning commands focusing on:
 - Different attack vectors than previous iterations
@@ -187,18 +219,26 @@ Be specific and provide exact commands."""
         self, 
         domain: str, 
         context: str, 
-        iteration: int
+        iteration: int,
+        discovered_endpoints: List[str] = None
     ) -> Dict[str, Any]:
         """Create deep scanning plan."""
+        commands = [
+            f"curl -s '{domain}?id=1' UNION SELECT version()--'",
+            f"curl -s -X POST {domain} -d 'cmd=whoami'"
+        ]
+        
+        # Add discovered endpoint testing
+        if discovered_endpoints:
+            for endpoint in discovered_endpoints[:2]:
+                commands.append(f"curl -s -I {endpoint}")
+        
         return {
             "phase": "deep_scan",
             "iteration": iteration,
             "strategy": f"Deep vulnerability testing on {domain}",
             "priorities": ["RCE", "SQL Injection", "SSRF"],
-            "commands": [
-                f"curl -s '{domain}?id=1' UNION SELECT version()--'",
-                f"curl -s -X POST {domain} -d 'cmd=whoami'"
-            ],
+            "commands": commands,
             "timestamp": datetime.now().isoformat()
         }
     

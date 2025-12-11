@@ -13,7 +13,6 @@ from typing import Any, Dict, List, Tuple, Optional
 from urllib.parse import urlparse
 
 import requests
-from openai import OpenAI
 from dotenv import load_dotenv
 
 try:
@@ -23,6 +22,7 @@ except ImportError:
 
 from headless_browser import HeadlessBrowser
 from cognitive_agents import PlannerAgent, ExecutorAgent, CriticAgent
+from js_static_analyzer import JSStaticAnalyzer
 
 
 class BugBountyAgent:
@@ -61,6 +61,7 @@ class BugBountyAgent:
         # Core components
         self.headless_browser = HeadlessBrowser()
         self.browser_intel: Dict[str, Any] = {}
+        self.js_analyzer = JSStaticAnalyzer(timeout=self.timeout)
         
         # Cognitive agents
         self.planner = PlannerAgent(self.model)
@@ -73,6 +74,8 @@ class BugBountyAgent:
         self.vulnerabilities = []
         self.scan_history = []
         self.critical_found = False
+        self.js_analysis_results: Dict[str, Any] = {}
+        self.discovered_endpoints = []
         
     def parse_url(self, url: str) -> bool:
         """Parse and validate the target URL."""
@@ -171,6 +174,60 @@ class BugBountyAgent:
         else:
             print(f"⚠ Headless browser capture status: {status}")
         return browser_data
+
+    def analyze_javascript_files(self, browser_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Analyze JavaScript files for secrets and hidden endpoints."""
+        if not browser_data or browser_data.get("status") != "captured":
+            return {"status": "skipped", "reason": "no_browser_data"}
+        
+        rendered_dom = browser_data.get("rendered_dom", "")
+        if not rendered_dom:
+            return {"status": "skipped", "reason": "no_dom_content"}
+        
+        print("\n[*] Running JavaScript static analysis...")
+        js_results = self.js_analyzer.analyze_all_scripts(rendered_dom, self.target_url)
+        self.js_analysis_results = js_results
+        
+        # Store discovered endpoints for future scanning
+        if js_results.get("status") == "completed":
+            self.discovered_endpoints = self.js_analyzer.get_discovered_endpoints_for_scanning()
+            
+            # Report findings
+            total_secrets = js_results.get("total_secrets", 0)
+            total_endpoints = js_results.get("total_endpoints", 0)
+            
+            if total_secrets > 0:
+                print(f"✓ JS Analysis: Found {total_secrets} secret(s) 🔑")
+                
+                # Add high-risk secrets as vulnerabilities
+                for analysis in js_results.get("analyses", []):
+                    for secret in analysis.get("secrets", []):
+                        if secret["type"] in ["aws_access_key", "aws_secret_key", "private_key", "database_url", "google_api_key"]:
+                            self.vulnerabilities.append({
+                                "type": "leaked_secret",
+                                "secret_type": secret["type"],
+                                "source": secret["source"],
+                                "confidence": 0.95,
+                                "reasoning": f"High-risk secret discovered in JavaScript: {secret['type']}",
+                                "context": secret["context"][:200],
+                                "severity": "CRITICAL"
+                            })
+                            self.critical_found = True
+            
+            if total_endpoints > 0:
+                print(f"✓ JS Analysis: Found {total_endpoints} hidden endpoint(s) 🔍")
+                print(f"  Discovered endpoints will be tested for vulnerabilities")
+        
+        # Record in scan history
+        self.scan_history.append({
+            "phase": "javascript_analysis",
+            "timestamp": datetime.now().isoformat(),
+            "status": js_results.get("status"),
+            "secrets_found": js_results.get("total_secrets", 0),
+            "endpoints_found": js_results.get("total_endpoints", 0)
+        })
+        
+        return js_results
 
     def analyze_with_ai(self, context: str, instruction: str) -> str:
         """Use Google Gemini to analyze information and determine next steps."""
@@ -286,6 +343,20 @@ Be thorough but efficient - prioritize critical vulnerability discovery."""
             "data": domain_info
         })
         
+        # Phase 2: JavaScript static analysis
+        js_results = self.analyze_javascript_files(browser_data)
+        if js_results.get("status") == "completed":
+            domain_info["js_analysis"] = {
+                "secrets_found": js_results.get("total_secrets", 0),
+                "endpoints_found": js_results.get("total_endpoints", 0),
+                "discovered_endpoints": self.discovered_endpoints[:5]
+            }
+        
+        # Check if critical secrets were found
+        if self.critical_found:
+            print("\n🚨 CRITICAL: High-risk secrets discovered in JavaScript files!")
+            return True
+        
         # Choose scanning mode
         if self.enable_cognitive_mode:
             return self._scan_with_cognitive_architecture(domain_info, browser_data)
@@ -313,7 +384,8 @@ Be thorough but efficient - prioritize critical vulnerability discovery."""
                 domain=self.domain,
                 domain_info=domain_info,
                 browser_data=browser_data,
-                iteration=iteration
+                iteration=iteration,
+                discovered_endpoints=self.discovered_endpoints
             )
             
             # Step 2: EXECUTOR - Execute the plan
@@ -548,6 +620,46 @@ Provide specific executable commands."""
                     report.append(f"  Output: {entry.get('output', '')[:200]}")
                 else:
                     report.append(f"  Status: Failed")
+        
+        report.append("")
+        report.append("=" * 80)
+        report.append("JAVASCRIPT STATIC ANALYSIS")
+        report.append("=" * 80)
+        report.append("")
+        if self.js_analysis_results:
+            js_status = self.js_analysis_results.get('status', 'unknown')
+            report.append(f"Analysis Status: {js_status}")
+            
+            if js_status == "completed":
+                total_secrets = self.js_analysis_results.get('total_secrets', 0)
+                total_endpoints = self.js_analysis_results.get('total_endpoints', 0)
+                
+                report.append(f"JavaScript Files Analyzed: {len(self.js_analysis_results.get('analyses', []))}")
+                report.append(f"Secrets Discovered: {total_secrets}")
+                report.append(f"Hidden Endpoints Discovered: {total_endpoints}")
+                report.append("")
+                
+                # List discovered secrets
+                if total_secrets > 0:
+                    report.append("LEAKED SECRETS:")
+                    for analysis in self.js_analysis_results.get('analyses', []):
+                        for secret in analysis.get('secrets', []):
+                            report.append(f"  [!] {secret['type'].upper()}")
+                            report.append(f"      Source: {secret['source']}")
+                            report.append(f"      Line: {secret.get('line_number', 'N/A')}")
+                            report.append(f"      Context: {secret['context'][:100]}...")
+                            report.append("")
+                
+                # List discovered endpoints
+                if total_endpoints > 0:
+                    report.append("HIDDEN ENDPOINTS:")
+                    for endpoint in self.discovered_endpoints[:20]:
+                        report.append(f"  • {endpoint}")
+                    if len(self.discovered_endpoints) > 20:
+                        report.append(f"  ... and {len(self.discovered_endpoints) - 20} more endpoints")
+                    report.append("")
+        else:
+            report.append("JavaScript analysis was not performed.")
         
         report.append("")
         report.append("=" * 80)
