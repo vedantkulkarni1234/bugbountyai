@@ -93,6 +93,7 @@ class HeadlessBrowser:
                     screenshot_saved = ""
 
                 forms = self._extract_forms(page)
+                script_urls = self._extract_script_urls(page)
 
                 return {
                     "status": "captured",
@@ -103,6 +104,7 @@ class HeadlessBrowser:
                     "screenshot_path": screenshot_saved,
                     "actions_performed": actions_performed,
                     "forms": forms,
+                    "script_urls": script_urls,
                     "console_logs": console_logs[:20],
                     "collected_at": datetime.now().isoformat(),
                 }
@@ -201,3 +203,35 @@ class HeadlessBrowser:
             pass
 
         return actions
+
+    def _extract_script_urls(self, page: Any, limit: int = 20) -> List[str]:
+        """
+        Extract all JavaScript file URLs from the page.
+        
+        Args:
+            page: Playwright page object
+            limit: Maximum number of script URLs to extract
+            
+        Returns:
+            List of script URLs
+        """
+        script_urls: List[str] = []
+        try:
+            scripts = page.query_selector_all("script[src]")
+        except Exception:
+            return script_urls
+        
+        for script in scripts[:limit]:
+            try:
+                src = script.get_attribute("src")
+                if src:
+                    # Convert relative URLs to absolute
+                    absolute_url = page.evaluate(
+                        f"(src) => new URL(src, document.baseURI).href",
+                        src
+                    )
+                    script_urls.append(absolute_url)
+            except Exception:
+                continue
+        
+        return script_urls

@@ -20,6 +20,13 @@ This is not just another vulnerability scanner. It features a **true cognitive a
 - **Action Simulation**: Clicks buttons, fills forms like a human tester
 - **Screenshot Capture**: Visual analysis of the target application
 
+🔐 **JavaScript Static Analysis (NEW!)**
+- **Secret Harvesting**: Automatically extracts API keys, tokens, and credentials from .js files
+- **Endpoint Discovery**: Finds hidden API routes and admin panels in JavaScript bundles
+- **Smart Detection**: AWS keys, Google API keys, JWT tokens, database URLs, private keys
+- **Attack Surface Expansion**: Discovered endpoints fed back into vulnerability scanning
+- See [JS_ANALYSIS.md](JS_ANALYSIS.md) for complete documentation
+
 🎯 **Ultra-Low False Positives**
 - Two-pass validation (pattern + AI reasoning)
 - Context-aware detection (distinguishes "discussing XSS" from "XSS vulnerability")
@@ -45,6 +52,8 @@ This is not just another vulnerability scanner. It features a **true cognitive a
   - Authentication Bypass
   - Path Traversal
   - Command Injection
+  - **Leaked Secrets** - API keys, tokens, credentials in JavaScript
+  - **Hidden Endpoints** - Undocumented APIs discovered from JS analysis
 
 📊 **Comprehensive Reporting**
 - Detailed vulnerability reports with confidence scores
