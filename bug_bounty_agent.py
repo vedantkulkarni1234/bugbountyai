@@ -16,6 +16,11 @@ import requests
 from openai import OpenAI
 from dotenv import load_dotenv
 
+try:
+    import google.generativeai as genai
+except ImportError:
+    genai = None
+
 
 class BugBountyAgent:
     """
@@ -33,6 +38,9 @@ class BugBountyAgent:
         self.api_key = os.getenv("GOOGLE_API_KEY")
         if not self.api_key:
             raise ValueError("GOOGLE_API_KEY environment variable not set")
+        
+        if genai is None:
+            raise ImportError("google-generativeai package not installed")
         
         genai.configure(api_key=self.api_key)
         self.model = genai.GenerativeModel("gemini-2.5-flash")
@@ -136,52 +144,68 @@ Be thorough but efficient - prioritize critical vulnerability discovery."""
             return ""
 
     def extract_commands_from_response(self, response: str) -> List[str]:
-        """Extract executable commands from AI response."""
+        """Extract executable commands from AI response.
+        Only extracts safe, legitimate scanning commands.
+        """
         commands = []
+        
+        # Whitelist of allowed command prefixes
+        allowed_commands = ['curl', 'nmap', 'ffuf', 'sqlmap', 'nikto', 'wget', 'python']
         
         lines = response.split('\n')
         for line in lines:
             line = line.strip()
-            if line.startswith('curl ') or \
-               line.startswith('nmap ') or \
-               line.startswith('ffuf ') or \
-               line.startswith('sqlmap ') or \
-               line.startswith('nikto ') or \
-               line.startswith('wget ') or \
-               line.startswith('python ') or \
-               'https://' in line and line.startswith('curl'):
-                commands.append(line)
+            
+            # Only extract lines that start with allowed commands
+            if any(line.startswith(f"{cmd} ") for cmd in allowed_commands):
+                # Reject commands with dangerous patterns
+                if not any(suspect in line.lower() for suspect in ['rm -', 'dd if=', 'mkfs', 'rm\\ -']):
+                    commands.append(line)
         
         return commands
 
     def check_for_vulnerabilities(self, output: str) -> Tuple[bool, str]:
-        """Check if output indicates a critical vulnerability."""
-        critical_indicators = [
-            r'sql\s+injection',
-            r'remote\s+code\s+execution',
-            r'rce',
-            r'critical',
-            r'error in your sql syntax',
-            r'syntax error',
-            r'warning: mysql',
-            r'authentication\s+bypass',
-            r'csrf',
-            r'xss',
-            r'xxe',
-            r'ssrf',
-            r'path\s+traversal',
-            r'command\s+injection',
-            r'os\s+command',
-            r'confidential',
-            r'vulnerability',
-            r'security\s+issue'
+        """Check if output indicates a critical vulnerability.
+        Uses context-aware pattern matching to reduce false positives.
+        """
+        # Patterns that indicate actual vulnerabilities (not just mentions)
+        # These look for actual error messages and evidence, not just keywords
+        vulnerable_indicators = [
+            # SQL Injection specific evidence
+            r"error in.*sql|sql.*error|you have an error.*sql|mysql_fetch|unclosed quotation mark",
+            r"syntax error.*near.*or|near\s+.*'.*'.*'",
+            # RCE/Command Injection evidence
+            r"(?:remote\s+code\s+execution|command\s+injection).*(?:vulnerability|exploit)",
+            r"shell\s+access|shell\s+execution|command\s+output",
+            # XXE evidence
+            r"(?:xml\s+external\s+entity|xxe).*(?:vulnerability|exploit|payload)",
+            # Authentication bypass (explicit)
+            r"(?:authentication|login)\s+(?:bypass|failed).*(?:success|exploit)",
+            # Path Traversal with evidence
+            r"(?:etc/passwd|windows/system|config\.php|\.\.\/)",
+            # SSRF evidence
+            r"(?:server.?side|ssrf).*(?:request|exploit|vulnerability)",
+        ]
+        
+        # Patterns that are too generic and often false positives
+        # These need additional context
+        mention_indicators = [
+            (r'\bxss\b', r'<script>|javascript:|onerror=|onload='),  # Only count if also has payload evidence
+            (r'\bcsrf\b', r'csrf\s+token|cross.?site|request\s+forgery'),
+            (r'\b(?:vulnerability|vulnerabilities)\b', r'(?:critical|high|severe|exploit)'),  # Only if severity mentioned
         ]
         
         output_lower = output.lower()
         
-        for pattern in critical_indicators:
+        # Check strong indicators
+        for pattern in vulnerable_indicators:
             if re.search(pattern, output_lower):
                 return True, pattern
+        
+        # Check mention indicators - require supporting evidence
+        for keyword_pattern, evidence_pattern in mention_indicators:
+            if re.search(keyword_pattern, output_lower) and re.search(evidence_pattern, output_lower):
+                return True, keyword_pattern
         
         return False, ""
 
@@ -273,17 +297,17 @@ Provide specific executable commands."""
         return self.critical_found
 
     def _generate_fallback_commands(self, iteration: int) -> List[str]:
-        """Generate fallback scanning commands."""
+        """Generate fallback scanning commands with proper syntax."""
         fallback_commands = [
             f"curl -s {self.target_url} | head -50",
             f"curl -s -X OPTIONS -v {self.target_url} 2>&1 | head -20",
-            f"curl -s -H 'User-Agent: Mozilla' {self.target_url} | grep -i 'error\\|warning\\|sql'",
+            f"curl -s -H 'User-Agent: Mozilla' {self.target_url} | grep -i 'error'",
         ]
         
         if iteration > 3:
             fallback_commands.extend([
-                f"curl -s {self.target_url}' OR '1'='1",
-                f"curl -s -X POST {self.target_url} -d 'test=1'",
+                f"curl -s '{self.target_url}?id=1' 2>&1 | head -20",
+                f"curl -s -X POST {self.target_url} -d 'test=1' 2>&1 | head -20",
             ])
         
         return fallback_commands[:2]

@@ -44,7 +44,7 @@ venv.bak/
 
 # Reports
 reports/
-*.txt
+reports/*.txt
 scans/
 
 # OS
