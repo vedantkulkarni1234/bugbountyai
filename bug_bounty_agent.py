@@ -22,16 +22,23 @@ except ImportError:
     genai = None
 
 from headless_browser import HeadlessBrowser
+from cognitive_agents import PlannerAgent, ExecutorAgent, CriticAgent
 
 
 class BugBountyAgent:
     """
-    An autonomous AI-powered bug bounty scanning agent that:
-    1. Takes a website URL
-    2. Performs reconnaissance using curl and other tools
-    3. Uses Google's Gemini to analyze outputs and generate next steps
-    4. Iteratively searches for vulnerabilities
-    5. Generates a comprehensive report
+    An autonomous AI-powered bug bounty scanning agent with cognitive architecture.
+    
+    Uses a Planner-Executor-Critic architecture:
+    1. Planner: Creates strategic scanning plans based on reconnaissance
+    2. Executor: Runs scanning commands and collects output
+    3. Critic: Validates findings to reduce false positives
+    
+    Features:
+    - Headless browser with Playwright for JavaScript and DOM analysis
+    - AI-driven vulnerability discovery with Google Gemini
+    - Context-aware pattern matching
+    - Comprehensive reporting
     """
 
     def __init__(self):
@@ -49,9 +56,18 @@ class BugBountyAgent:
         self.max_iterations = int(os.getenv("MAX_ITERATIONS", 15))
         self.timeout = int(os.getenv("TIMEOUT", 10))
         self.enable_headless_browser = os.getenv("ENABLE_HEADLESS_BROWSER", "true").lower() not in {"0", "false", "no", "off"}
+        self.enable_cognitive_mode = os.getenv("ENABLE_COGNITIVE_MODE", "true").lower() not in {"0", "false", "no", "off"}
+        
+        # Core components
         self.headless_browser = HeadlessBrowser()
         self.browser_intel: Dict[str, Any] = {}
         
+        # Cognitive agents
+        self.planner = PlannerAgent(self.model)
+        self.executor = ExecutorAgent(self.execute_command)
+        self.critic = CriticAgent(self.model)
+        
+        # State
         self.target_url = None
         self.domain = None
         self.vulnerabilities = []
@@ -247,9 +263,16 @@ Be thorough but efficient - prioritize critical vulnerability discovery."""
         return False, ""
 
     def scan_website(self) -> bool:
-        """Execute the main scanning loop."""
+        """
+        Execute the main scanning loop using cognitive architecture.
+        Uses Planner-Executor-Critic pattern for intelligent scanning.
+        """
         print(f"\n{'='*60}")
         print(f"Starting autonomous scan of {self.domain}")
+        if self.enable_cognitive_mode:
+            print("Mode: Cognitive Architecture (Planner-Executor-Critic)")
+        else:
+            print("Mode: Legacy Linear Scanning")
         print(f"{'='*60}\n")
         
         # Phase 1: Initial reconnaissance
@@ -263,8 +286,93 @@ Be thorough but efficient - prioritize critical vulnerability discovery."""
             "data": domain_info
         })
         
-        initial_context = json.dumps(domain_info, indent=2)
+        # Choose scanning mode
+        if self.enable_cognitive_mode:
+            return self._scan_with_cognitive_architecture(domain_info, browser_data)
+        else:
+            return self._scan_legacy_mode(domain_info)
+    
+    def _scan_with_cognitive_architecture(
+        self, 
+        domain_info: Dict[str, Any], 
+        browser_data: Dict[str, Any]
+    ) -> bool:
+        """
+        Cognitive architecture scanning with Planner-Executor-Critic.
+        """
+        iteration = 0
         
+        while iteration < self.max_iterations and not self.critical_found:
+            iteration += 1
+            print(f"\n{'='*60}")
+            print(f"[Iteration {iteration}/{self.max_iterations}]")
+            print(f"{'='*60}")
+            
+            # Step 1: PLANNER - Create strategic scanning plan
+            plan = self.planner.create_scanning_plan(
+                domain=self.domain,
+                domain_info=domain_info,
+                browser_data=browser_data,
+                iteration=iteration
+            )
+            
+            # Step 2: EXECUTOR - Execute the plan
+            execution_results = self.executor.execute_plan(plan)
+            
+            # Step 3: CRITIC - Validate findings
+            for result in execution_results:
+                if not result["success"] or not result["output"]:
+                    continue
+                
+                # Check for potential vulnerabilities
+                is_potential_vuln, indicator = self.check_for_vulnerabilities(result["output"])
+                
+                if is_potential_vuln:
+                    # Critic validates the finding
+                    is_real, confidence, reasoning = self.critic.validate_finding(
+                        command=result["command"],
+                        output=result["output"],
+                        potential_vuln=indicator
+                    )
+                    
+                    if is_real and confidence >= 0.6:
+                        # Real vulnerability confirmed
+                        self.critical_found = True
+                        self.vulnerabilities.append({
+                            "iteration": iteration,
+                            "command": result["command"],
+                            "indicator": indicator,
+                            "confidence": confidence,
+                            "reasoning": reasoning,
+                            "output": result["output"][:1000],
+                            "validated_by": "critic_agent"
+                        })
+                        print(f"\n{'🚨'*20}")
+                        print(f"CRITICAL VULNERABILITY CONFIRMED: {indicator}")
+                        print(f"Confidence: {confidence:.0%}")
+                        print(f"Reasoning: {reasoning}")
+                        print(f"{'🚨'*20}\n")
+                        break
+                
+                # Store scan results
+                self.scan_history.append({
+                    "iteration": iteration,
+                    "command": result["command"],
+                    "success": result["success"],
+                    "output": result["output"][:500],
+                    "timestamp": result["timestamp"]
+                })
+            
+            if self.critical_found:
+                break
+        
+        return self.critical_found
+    
+    def _scan_legacy_mode(self, domain_info: Dict[str, Any]) -> bool:
+        """
+        Legacy linear scanning mode (backward compatibility).
+        """
+        initial_context = json.dumps(domain_info, indent=2)
         iteration = 0
         
         while iteration < self.max_iterations and not self.critical_found:
