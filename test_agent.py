@@ -73,6 +73,18 @@ class TestVulnerabilityAnalyzer(unittest.TestCase):
         output = "Normal application response"
         is_vuln, types = VulnerabilityAnalyzer.analyze(output)
         self.assertFalse(is_vuln)
+    
+    def test_false_positive_word_critical(self):
+        """Test that 'critical' alone doesn't trigger false positive."""
+        output = "This is a critical update for your system"
+        is_vuln, types = VulnerabilityAnalyzer.analyze(output)
+        self.assertFalse(is_vuln)
+    
+    def test_false_positive_word_vulnerability(self):
+        """Test that 'vulnerability' alone doesn't trigger without context."""
+        output = "We discussed vulnerability scanning techniques"
+        is_vuln, types = VulnerabilityAnalyzer.analyze(output)
+        self.assertFalse(is_vuln)
 
 
 class TestBugBountyAgent(unittest.TestCase):
@@ -102,9 +114,39 @@ class TestBugBountyAgent(unittest.TestCase):
     
     def test_check_for_vulnerabilities_negative(self):
         """Test vulnerability checking with clean output."""
-        output = "Normal 200 response"
+        output = "Normal 200 response OK successful"
         is_vuln, indicator = self.agent.check_for_vulnerabilities(output)
         self.assertFalse(is_vuln)
+    
+    def test_false_positive_critical_word_alone(self):
+        """Test that 'critical' word alone doesn't trigger vulnerability detection."""
+        output = "This is a critical security update"
+        is_vuln, indicator = self.agent.check_for_vulnerabilities(output)
+        self.assertFalse(is_vuln)
+    
+    def test_false_positive_vulnerability_word_alone(self):
+        """Test that 'vulnerability' word alone doesn't trigger without evidence."""
+        output = "vulnerability assessment in progress"
+        is_vuln, indicator = self.agent.check_for_vulnerabilities(output)
+        self.assertFalse(is_vuln)
+    
+    def test_false_positive_xss_word_alone(self):
+        """Test that 'xss' word alone doesn't trigger without payload evidence."""
+        output = "XSS testing framework installed"
+        is_vuln, indicator = self.agent.check_for_vulnerabilities(output)
+        self.assertFalse(is_vuln)
+    
+    def test_real_sql_injection_error(self):
+        """Test genuine SQL error detection."""
+        output = "Error in your SQL syntax near 'OR 1=1' at line 5"
+        is_vuln, indicator = self.agent.check_for_vulnerabilities(output)
+        self.assertTrue(is_vuln)
+    
+    def test_real_path_traversal(self):
+        """Test path traversal evidence detection."""
+        output = "File contents: root:x:0:0:/root:/bin/bash"
+        is_vuln, indicator = self.agent.check_for_vulnerabilities(output)
+        self.assertTrue(is_vuln)
     
     def test_execute_command_success(self):
         """Test successful command execution."""

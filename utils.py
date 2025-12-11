@@ -62,9 +62,9 @@ class CommandBuilder:
     def build_sql_injection_test(url: str) -> List[str]:
         """Generate SQL injection test commands."""
         tests = [
-            f"curl -s \"{url}' OR '1'='1\"",
-            f"curl -s \"{url}' UNION SELECT NULL--\"",
-            f"curl -s \"{url}' AND 1=1--\"",
+            f"curl -s \"{url}?id=1'\"",
+            f"curl -s \"{url}?id=1' OR '1'='1\"",
+            f"curl -s \"{url}?id=1' UNION SELECT NULL--\"",
         ]
         return tests
     
@@ -72,8 +72,8 @@ class CommandBuilder:
     def build_xss_test(url: str) -> List[str]:
         """Generate XSS test commands."""
         tests = [
-            f"curl -s \"{url}<script>alert(1)</script>\"",
-            f"curl -s \"{url}\\\"onmouseover=alert(1)\\\"\"",
+            f"curl -s \"{url}?q=<script>alert(1)</script>\"",
+            f"curl -s \"{url}?q=test\" -H \"X-Test: <img src=x onerror=alert(1)>\"",
         ]
         return tests
     
@@ -81,59 +81,59 @@ class CommandBuilder:
     def build_directory_traversal_tests(url: str) -> List[str]:
         """Generate directory traversal test commands."""
         tests = [
-            f"curl -s \"{url}/../../../etc/passwd\"",
-            f"curl -s \"{url}/../../config.php\"",
+            f"curl -s \"{url}?file=../../../etc/passwd\"",
+            f"curl -s \"{url}?path=../../config.php\"",
         ]
         return tests
 
 
 class VulnerabilityAnalyzer:
-    """Utilities for analyzing potential vulnerabilities."""
+    """Utilities for analyzing potential vulnerabilities.
+    Uses strong pattern matching to minimize false positives.
+    """
     
-    # Vulnerability patterns
-    PATTERNS = {
+    # Strong vulnerability patterns - evidence of actual vulnerabilities
+    STRONG_PATTERNS = {
         'sql_injection': [
-            r'sql\s+error',
-            r'syntax\s+error',
-            r'warning:\s+mysql',
-            r'fatal\s+error.*mysql',
-            r'you have an error',
+            r'(?:error in|sql error).*(?:syntax|query)',
+            r'(?:you have an error|sql syntax)',
+            r'(?:mysql_fetch|mysql_error)',
             r'unclosed quotation mark',
+            r"(?:near|at line).*'",
         ],
         'rce': [
-            r'remote\s+code\s+execution',
-            r'rce',
-            r'command\s+injection',
-            r'os\s+command',
-            r'shell\s+access',
+            r'(?:remote\s+code\s+execution|command\s+injection).*(?:found|detected|vulnerability)',
+            r'(?:shell\s+access|command\s+execution)',
+            r'(?:output|result).*(?:whoami|id|uname)',
         ],
         'xss': [
-            r'<script>',
-            r'javascript:',
-            r'onerror=',
-            r'onload=',
-            r'cross.?site',
+            r'<script>.*?</script>',
+            r'javascript:\w+',
+            r'(?:onerror|onload|onclick|onmouseover)=',
+            r'alert\(\d+\)',
         ],
         'authentication_bypass': [
-            r'authentication\s+bypass',
-            r'unauthorized\s+access',
-            r'login\s+bypass',
-            r'password\s+reset\s+flaw',
+            r'(?:authentication|login)\s+(?:bypass|failed).*(?:success|valid)',
+            r'(?:password reset|reset token).*(?:vulnerability|exploit)',
         ],
         'ssrf': [
-            r'server.?side\s+request\s+forgery',
-            r'ssrf',
-            r'internal\s+request',
+            r'(?:server.?side|ssrf).*(?:vulnerability|exploit)',
+            r'(?:internal|localhost|127\.0\.0\.1|169\.254)',
         ],
         'xxe': [
-            r'xml\s+external\s+entity',
-            r'xxe',
-            r'external\s+entity',
+            r'(?:xml\s+external\s+entity|xxe).*(?:vulnerability|payload)',
+            r'<!ENTITY.*SYSTEM',
         ],
         'path_traversal': [
-            r'path\s+traversal',
-            r'directory\s+traversal',
-            r'\.\.\/.*\.\.\/',
+            r'(?:etc/passwd|/bin/|/root|windows/system|config\.php)',
+            r'(?:\.\./){2,}',
+        ]
+    }
+    
+    # Weak patterns - require additional context (currently not used for false positive reduction)
+    WEAK_PATTERNS = {
+        'potential_issue': [
+            r'\b(?:warning|error|exception)\b.*(?:database|query)',
         ]
     }
     
@@ -141,6 +141,7 @@ class VulnerabilityAnalyzer:
     def analyze(output: str) -> Tuple[bool, List[str]]:
         """
         Analyze output for vulnerability indicators.
+        Uses strong patterns only to reduce false positives.
         
         Returns:
             Tuple of (is_vulnerable, vulnerability_types)
@@ -148,7 +149,8 @@ class VulnerabilityAnalyzer:
         found_vulns = []
         output_lower = output.lower()
         
-        for vuln_type, patterns in VulnerabilityAnalyzer.PATTERNS.items():
+        # Only check strong patterns for actual vulnerabilities
+        for vuln_type, patterns in VulnerabilityAnalyzer.STRONG_PATTERNS.items():
             for pattern in patterns:
                 if re.search(pattern, output_lower):
                     found_vulns.append(vuln_type)
