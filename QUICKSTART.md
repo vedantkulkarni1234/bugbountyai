@@ -7,6 +7,11 @@
 pip install -r requirements.txt
 ```
 
+#### Install Playwright Browsers (Recommended)
+```bash
+playwright install --with-deps chromium
+```
+
 ### Step 2: Configure Google API Key
 ```bash
 cp .env.example .env
@@ -87,6 +92,11 @@ python cli.py https://example.com -o /path/to/report.txt
 python cli.py https://example.com --timeout 30
 ```
 
+### Force Headless Browser Capture
+```bash
+python cli.py https://example.com --headless-mode on
+```
+
 ## What to Expect
 
 ### Typical Scan Timeline
@@ -137,6 +147,14 @@ python cli.py https://example.com --max-iterations 5
 **Solution**: Increase timeout value
 ```bash
 python cli.py https://example.com --timeout 30
+```
+
+### Problem: "Playwright is not installed"
+**Solution**:
+```bash
+pip install -r requirements.txt
+playwright install --with-deps chromium
+export ENABLE_HEADLESS_BROWSER=false  # optional if you want to skip it
 ```
 
 ## Next Steps

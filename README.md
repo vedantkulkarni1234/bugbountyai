@@ -29,12 +29,19 @@ An expert-level, fully autonomous AI-powered web vulnerability scanner that uses
 - Provides actionable remediation recommendations
 - Timestamped scan history
 
+🕵️ **Headless Browser Reconnaissance (Playwright)**
+- Renders the DOM exactly as a real browser would
+- Simulates baseline human actions (scrolling, form input, button clicks)
+- Captures full-page screenshots for manual or AI vision review
+- Extracts live form metadata, console logs, and rendered HTML for Gemini context
+
 ## Installation
 
 ### Requirements
 - Python 3.8+
 - Google API Key (Gemini 2.5 Flash access required)
 - curl, nmap, and other common security tools (optional but recommended)
+- Playwright browsers (install with `playwright install --with-deps chromium` for full headless support)
 
 ### Setup
 
@@ -53,6 +60,11 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 3. **Install dependencies**
 ```bash
 pip install -r requirements.txt
+```
+
+   _Headless Browser Setup_
+```bash
+playwright install --with-deps chromium
 ```
 
 4. **Configure environment**
@@ -88,6 +100,7 @@ python cli.py https://example.com \
 | `--max-iterations` | `-i` | int | Maximum scanning iterations | 15 |
 | `--timeout` | `-t` | int | Command timeout in seconds | 10 |
 | `--verbose` | `-v` | flag | Enable verbose output | False |
+| `--headless-mode` | - | str | Control Playwright capture (`auto`, `on`, `off`) | auto |
 
 ### Python API Usage
 
@@ -113,6 +126,7 @@ print(f"Report saved to: {report_file}")
    - Performs DNS lookups
    - Retrieves WHOIS information
    - Tests basic connectivity
+   - (Optional) Launches Playwright to capture rendered DOM, forms, and screenshots
 
 3. **AI-Driven Analysis Loop**
     - Sends reconnaissance data to Google Gemini 2.5 Flash
@@ -151,6 +165,7 @@ Parse URL → Gather Initial Info → Loop:
 | `GOOGLE_API_KEY` | Your Google API key for Gemini | Required |
 | `MAX_ITERATIONS` | Maximum scanning iterations | 15 |
 | `TIMEOUT` | Command execution timeout (seconds) | 10 |
+| `ENABLE_HEADLESS_BROWSER` | Enable/disable Playwright reconnaissance | true |
 
 ### Example .env File
 
@@ -158,6 +173,7 @@ Parse URL → Gather Initial Info → Loop:
 GOOGLE_API_KEY=your-google-api-key-here
 MAX_ITERATIONS=15
 TIMEOUT=10
+ENABLE_HEADLESS_BROWSER=true
 ```
 
 ## Output
@@ -183,6 +199,11 @@ Reports are saved to: `reports/scan_report_<domain>_<timestamp>.txt`
   - Commands executed
   - Results for each command
   - Timestamps
+
+- **Headless Browser Intelligence**
+  - Capture status and screenshot path
+  - Actions simulated in the rendered browser
+  - DOM snippet plus observed forms/console logs
 
 - **Recommendations**
   - Security improvements
@@ -271,6 +292,11 @@ Immediate Actions Required:
 - Ensure Gemini 2.5 Flash model is available in your account
 - Check Google API quotas and rate limits
 - Verify API key has necessary permissions
+
+### "Playwright is not installed" warning
+- Run `pip install -r requirements.txt` to install the Python package
+- Execute `playwright install --with-deps chromium` so browsers are downloaded
+- Set `ENABLE_HEADLESS_BROWSER=false` if you want to skip headless capture entirely
 
 ## Advanced Usage
 

@@ -158,6 +158,38 @@ class TestBugBountyAgent(unittest.TestCase):
         """Test command timeout."""
         success, output = self.agent.execute_command("sleep 100")
         self.assertFalse(success)
+    
+    @patch('bug_bounty_agent.HeadlessBrowser')
+    def test_headless_browser_skipped_when_disabled(self, MockBrowser):
+        """Headless browser should skip when disabled."""
+        mock_instance = MockBrowser.return_value
+        mock_instance.is_available.return_value = True
+        with patch.dict('os.environ', {'GOOGLE_API_KEY': 'test-key'}):
+            agent = BugBountyAgent()
+        agent.enable_headless_browser = False
+        agent.target_url = "https://example.com"
+        result = agent.gather_browser_intel()
+        self.assertEqual(result.get("status"), "skipped")
+        mock_instance.collect_page_data.assert_not_called()
+    
+    @patch('bug_bounty_agent.HeadlessBrowser')
+    def test_headless_browser_collects_when_available(self, MockBrowser):
+        """Headless browser should collect data when enabled and available."""
+        mock_instance = MockBrowser.return_value
+        mock_instance.is_available.return_value = True
+        mock_instance.collect_page_data.return_value = {
+            "status": "captured",
+            "rendered_dom": "<html></html>",
+            "actions_performed": ["scrolled_to_bottom"],
+        }
+        with patch.dict('os.environ', {'GOOGLE_API_KEY': 'test-key'}):
+            agent = BugBountyAgent()
+        agent.enable_headless_browser = True
+        agent.target_url = "https://example.com"
+        data = agent.gather_browser_intel()
+        self.assertEqual(data.get("status"), "captured")
+        mock_instance.collect_page_data.assert_called_once_with("https://example.com")
+        self.assertTrue(any(entry.get("phase") == "headless_browser" for entry in agent.scan_history))
 
 
 class TestIntegration(unittest.TestCase):

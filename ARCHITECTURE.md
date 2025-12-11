@@ -102,7 +102,19 @@ Helper utilities for various operations.
 - Logging
 - JSON serialization
 
-### 5. **test_agent.py** - Test Suite
+### 5. **headless_browser.py** - Playwright Controller
+Dedicated utilities for rendering targets inside a headless Chromium browser.
+
+**Key Classes:**
+- `HeadlessBrowser`: Manages Playwright sessions, screenshots, and DOM extraction
+
+**Responsibilities:**
+- Launch Chromium with safe defaults (no-sandbox, headless)
+- Capture rendered HTML, console logs, and form metadata
+- Simulate basic user actions (scrolling, button clicks, text input)
+- Generate screenshots stored under `reports/browser/screenshots`
+
+### 6. **test_agent.py** - Test Suite
 Unit and integration tests.
 
 **Test Classes:**
@@ -122,13 +134,14 @@ Unit and integration tests.
 2. URL Validation & Parsing
    ↓
 3. Initial Reconnaissance
-   ├─ HTTP Headers
-   ├─ DNS Lookup
-   ├─ WHOIS Query
-   └─ Port Testing
-   ↓
+    ├─ HTTP Headers
+    ├─ DNS Lookup
+    ├─ WHOIS Query
+    ├─ Port Testing
+    └─ (Optional) Headless browser DOM/screenshot capture
+    ↓
 4. Iteration Loop (up to MAX_ITERATIONS)
-    ├─ Send reconnaissance data to Google Gemini
+
     ├─ Receive vulnerability scanning suggestions
     ├─ Execute suggested commands
     ├─ Analyze output for vulnerabilities
@@ -308,6 +321,7 @@ OPENAI_MODEL = "gpt-4o"  # Can be changed in config.py
 - `openai`: OpenAI API client
 - `python-dotenv`: Environment variable management
 - `dnspython`: DNS utilities (optional)
+- `playwright`: Headless browser automation and DOM capture
 
 ### System Requirements
 - Python 3.8+

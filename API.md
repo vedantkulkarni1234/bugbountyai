@@ -20,6 +20,9 @@ agent = BugBountyAgent()
 - `client` (OpenAI): OpenAI client instance
 - `max_iterations` (int): Maximum scanning iterations (default: 15)
 - `timeout` (int): Command timeout in seconds (default: 10)
+- `enable_headless_browser` (bool): Whether Playwright reconnaissance is active
+- `headless_browser` (HeadlessBrowser): Playwright controller for DOM capture
+- `browser_intel` (dict): Latest headless browser capture metadata
 - `target_url` (str): Target website URL
 - `domain` (str): Extracted domain name
 - `vulnerabilities` (list): List of found vulnerabilities
@@ -60,6 +63,21 @@ Gather initial domain reconnaissance information.
 ```python
 info = agent.get_domain_info()
 print(info['http_headers'])
+```
+
+#### `gather_browser_intel() -> Dict[str, Any]`
+
+Render the target URL with Playwright to capture the live DOM, screenshots, and form metadata.
+
+**Returns**:
+- `Dict[str, Any]`: Dictionary containing capture status, screenshot path, rendered DOM snippet, observed forms, actions performed, etc.
+
+**Example**:
+```python
+agent.parse_url("https://example.com")
+intel = agent.gather_browser_intel()
+if intel.get("status") == "captured":
+    print(intel["screenshot_path"])
 ```
 
 #### `execute_command(command: str) -> Tuple[bool, str]`
@@ -315,6 +333,7 @@ load_dotenv()
 openai_key = os.getenv("OPENAI_API_KEY")
 max_iter = int(os.getenv("MAX_ITERATIONS", 15))
 timeout = int(os.getenv("TIMEOUT", 10))
+headless_enabled = os.getenv("ENABLE_HEADLESS_BROWSER", "true")
 ```
 
 ### Configuration Classes
@@ -366,6 +385,27 @@ domain_info = {
     "dns_info": "...",         # DNS lookup results
     "whois_info": "...",       # WHOIS data
     "https_status": "443"      # HTTPS port status
+}
+```
+
+### Headless Browser Intel Object
+
+```python
+browser_intel = {
+    "status": "captured",
+    "screenshot_path": "reports/browser/screenshots/example_com.png",
+    "rendered_dom": "<html>...</html>",
+    "actions_performed": ["scrolled_to_bottom", "clicked_primary_button"],
+    "forms": [
+        {
+            "method": "POST",
+            "action": "/login",
+            "inputs": [
+                {"type": "text", "name": "username"},
+                {"type": "password", "name": "password"}
+            ]
+        }
+    ]
 }
 ```
 

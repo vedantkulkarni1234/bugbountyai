@@ -53,6 +53,16 @@ Examples:
         help="Enable verbose output"
     )
     
+    parser.add_argument(
+        "--headless-mode",
+        choices=["auto", "on", "off"],
+        default="auto",
+        help=(
+            "Control the Playwright-powered headless browser reconnaissance. "
+            "Use 'on' to force enable, 'off' to disable, or 'auto' to respect the .env setting."
+        )
+    )
+    
     return parser.parse_args()
 
 
@@ -72,12 +82,16 @@ def main():
             agent.max_iterations = args.max_iterations
         if args.timeout:
             agent.timeout = args.timeout
+        if args.headless_mode != "auto":
+            agent.enable_headless_browser = args.headless_mode == "on"
         
         if args.verbose:
             print(f"[*] Configuration:")
             print(f"    - Target: {args.target}")
             print(f"    - Max Iterations: {agent.max_iterations}")
             print(f"    - Timeout: {agent.timeout}s")
+            headless_state = "enabled" if agent.enable_headless_browser else "disabled"
+            print(f"    - Headless Browser: {headless_state} (mode={args.headless_mode})")
             print()
         
         # Run the scan
