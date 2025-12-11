@@ -102,11 +102,17 @@ pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
+#### Install Playwright Browsers (Recommended)
+```bash
+playwright install --with-deps chromium
+```
+
 **What gets installed:**
 - `requests==2.31.0` - HTTP library
 - `google-generativeai==0.6.0` - Google Generative AI client
 - `python-dotenv==1.0.0` - Environment variable management
 - `dnspython==2.4.2` - DNS utilities
+- `playwright==1.48.0` - Headless browser automation
 
 ### Step 4: Configure Environment
 
@@ -123,6 +129,7 @@ Edit the `.env` file:
 GOOGLE_API_KEY=your-google-api-key-here
 MAX_ITERATIONS=15
 TIMEOUT=10
+ENABLE_HEADLESS_BROWSER=true
 ```
 
 ### Step 5: Verify Installation
@@ -255,6 +262,15 @@ venv\Scripts\activate     # Windows
 
 # Reinstall dependencies
 pip install -r requirements.txt
+```
+
+### Issue: "Playwright is not installed"
+**Solution:**
+```bash
+pip install -r requirements.txt
+playwright install --with-deps chromium
+# Or disable it entirely
+export ENABLE_HEADLESS_BROWSER=false
 ```
 
 ### Issue: "GOOGLE_API_KEY not set"

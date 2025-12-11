@@ -9,7 +9,7 @@ import json
 import subprocess
 import re
 from datetime import datetime
-from typing import Dict, List, Tuple, Optional
+from typing import Any, Dict, List, Tuple, Optional
 from urllib.parse import urlparse
 
 import requests
@@ -20,6 +20,8 @@ try:
     import google.generativeai as genai
 except ImportError:
     genai = None
+
+from headless_browser import HeadlessBrowser
 
 
 class BugBountyAgent:
@@ -46,6 +48,9 @@ class BugBountyAgent:
         self.model = genai.GenerativeModel("gemini-2.5-flash")
         self.max_iterations = int(os.getenv("MAX_ITERATIONS", 15))
         self.timeout = int(os.getenv("TIMEOUT", 10))
+        self.enable_headless_browser = os.getenv("ENABLE_HEADLESS_BROWSER", "true").lower() not in {"0", "false", "no", "off"}
+        self.headless_browser = HeadlessBrowser()
+        self.browser_intel: Dict[str, Any] = {}
         
         self.target_url = None
         self.domain = None
@@ -118,6 +123,38 @@ class BugBountyAgent:
             info["https_status"] = output
         
         return info
+
+    def gather_browser_intel(self) -> Dict[str, Any]:
+        """Use Playwright to render the page and capture dynamic context."""
+        if not self.target_url:
+            return {}
+        
+        if not self.enable_headless_browser:
+            data = {"status": "skipped", "reason": "headless_browser_disabled"}
+            self.browser_intel = data
+            self._record_browser_history(data)
+            return data
+        
+        if not self.headless_browser.is_available():
+            print("⚠ Playwright is not installed. Skipping headless browser capture.")
+            data = {"status": "skipped", "reason": "playwright_not_available"}
+            self.browser_intel = data
+            self._record_browser_history(data)
+            return data
+        
+        print("\n[*] Capturing headless browser intelligence (Playwright)...")
+        browser_data = self.headless_browser.collect_page_data(self.target_url)
+        self.browser_intel = browser_data
+        self._record_browser_history(browser_data)
+        status = browser_data.get("status")
+        reason = browser_data.get("reason")
+        if status == "captured":
+            print("✓ Headless browser capture complete.")
+        elif reason:
+            print(f"⚠ Headless browser capture result: {reason}")
+        else:
+            print(f"⚠ Headless browser capture status: {status}")
+        return browser_data
 
     def analyze_with_ai(self, context: str, instruction: str) -> str:
         """Use Google Gemini to analyze information and determine next steps."""
@@ -217,6 +254,9 @@ Be thorough but efficient - prioritize critical vulnerability discovery."""
         
         # Phase 1: Initial reconnaissance
         domain_info = self.get_domain_info()
+        browser_data = self.gather_browser_intel()
+        if browser_data:
+            domain_info["headless_browser"] = self._summarize_browser_data(browser_data)
         self.scan_history.append({
             "phase": "reconnaissance",
             "timestamp": datetime.now().isoformat(),
@@ -296,6 +336,42 @@ Provide specific executable commands."""
         
         return self.critical_found
 
+    def _record_browser_history(self, data: Dict[str, Any]) -> None:
+        if not data:
+            return
+        entry: Dict[str, Any] = {
+            "phase": "headless_browser",
+            "timestamp": datetime.now().isoformat(),
+            "status": data.get("status", "unknown"),
+        }
+        if data.get("reason"):
+            entry["reason"] = data["reason"]
+        screenshot = data.get("screenshot_path")
+        if screenshot:
+            entry["screenshot_path"] = screenshot
+        actions = data.get("actions_performed")
+        if isinstance(actions, list) and actions:
+            entry["actions"] = actions[:3]
+        rendered_dom = data.get("rendered_dom")
+        if isinstance(rendered_dom, str) and rendered_dom:
+            entry["rendered_dom_snippet"] = rendered_dom[:200]
+        self.scan_history.append(entry)
+
+    def _summarize_browser_data(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        summary = dict(data)
+        rendered_dom = summary.get("rendered_dom")
+        if isinstance(rendered_dom, str) and rendered_dom:
+            max_chars = 3000
+            if len(rendered_dom) > max_chars:
+                summary["rendered_dom"] = rendered_dom[:max_chars] + "... [truncated]"
+        console_logs = summary.get("console_logs")
+        if isinstance(console_logs, list):
+            summary["console_logs"] = console_logs[:10]
+        forms = summary.get("forms")
+        if isinstance(forms, list):
+            summary["forms"] = forms[:3]
+        return summary
+
     def _generate_fallback_commands(self, iteration: int) -> List[str]:
         """Generate fallback scanning commands with proper syntax."""
         fallback_commands = [
@@ -364,6 +440,55 @@ Provide specific executable commands."""
                     report.append(f"  Output: {entry.get('output', '')[:200]}")
                 else:
                     report.append(f"  Status: Failed")
+        
+        report.append("")
+        report.append("=" * 80)
+        report.append("HEADLESS BROWSER INTELLIGENCE")
+        report.append("=" * 80)
+        report.append("")
+        if self.browser_intel:
+            report.append(f"Capture Status: {self.browser_intel.get('status', 'unknown')}")
+            reason = self.browser_intel.get("reason")
+            if reason:
+                report.append(f"Reason: {reason}")
+            page_title = self.browser_intel.get("page_title")
+            if page_title:
+                report.append(f"Page Title: {page_title}")
+            final_url = self.browser_intel.get("final_url")
+            if final_url:
+                report.append(f"Final URL: {final_url}")
+            screenshot = self.browser_intel.get("screenshot_path")
+            if screenshot:
+                report.append(f"Screenshot: {screenshot}")
+            actions = self.browser_intel.get("actions_performed")
+            if isinstance(actions, list) and actions:
+                report.append("Actions Simulated:")
+                for action in actions:
+                    report.append(f"  - {action}")
+            forms = self.browser_intel.get("forms")
+            if isinstance(forms, list) and forms:
+                report.append("Observed Forms:")
+                for form in forms[:3]:
+                    method = form.get("method", "GET")
+                    action_target = form.get("action") or "N/A"
+                    report.append(f"  • Method: {method} | Action: {action_target}")
+                    inputs = form.get("inputs") or []
+                    for field in inputs[:5]:
+                        field_type = field.get("type", "input")
+                        field_name = field.get("name") or "(unnamed)"
+                        report.append(f"      - {field_type}: {field_name}")
+            dom_snippet = self.browser_intel.get("rendered_dom")
+            if isinstance(dom_snippet, str) and dom_snippet:
+                report.append("Rendered DOM Snippet:")
+                snippet = dom_snippet[:500]
+                if len(dom_snippet) > 500:
+                    snippet += "..."
+                report.append(snippet)
+        else:
+            if self.enable_headless_browser:
+                report.append("Headless browser data unavailable.")
+            else:
+                report.append("Headless browser capture disabled (ENABLE_HEADLESS_BROWSER=0).")
         
         report.append("")
         report.append("=" * 80)

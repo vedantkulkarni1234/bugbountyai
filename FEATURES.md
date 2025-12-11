@@ -30,6 +30,12 @@ The agent can identify:
 - Offers actionable remediation recommendations
 - Automatic report organization with severity levels
 
+### 🕵️ Headless Browser Reconnaissance
+- Playwright-powered Chromium session for SPA and DOM-heavy sites
+- Automatic scrolling, button clicking, and basic form submission attempts
+- Captures full-page screenshots for human or AI vision review
+- Extracts rendered HTML, console logs, and form metadata for Gemini context
+
 ### 🚀 Easy-to-Use Interface
 - Simple CLI for quick scans
 - Python API for programmatic access
@@ -45,6 +51,12 @@ The agent can identify:
 - WHOIS data retrieval
 - Port connectivity testing
 - Server information extraction
+
+### Headless Browser Mode
+- Playwright-rendered DOM for SPA visibility
+- Automatic scrolling, clicks, and text input
+- Screenshot and console log capture for visual analysis
+- Form metadata extraction for multi-step workflows
 
 ### Intelligent Command Generation
 - Fallback command strategies
@@ -106,7 +118,12 @@ The agent can identify:
    - Success/failure indicators
    - Output snippets for each command
 
-4. **Recommendations**
+4. **Headless Browser Intelligence**
+   - Headless capture status and screenshot location
+   - Actions simulated (scrolling, clicks, submissions)
+   - DOM snippet plus captured forms and console logs
+
+5. **Recommendations**
    - Critical vulnerability actions
    - Security improvements
    - Best practices
@@ -126,12 +143,14 @@ reports/
 - `OPENAI_API_KEY` - Required for AI analysis
 - `MAX_ITERATIONS` - Control scan depth (default: 15)
 - `TIMEOUT` - Command execution timeout (default: 10s)
+- `ENABLE_HEADLESS_BROWSER` - Toggle Playwright reconnaissance (default: true)
 
 ### CLI Arguments
 - `--max-iterations` - Override max iterations
 - `--timeout` - Override command timeout
 - `--output` - Custom report file path
 - `--verbose` - Enable detailed output
+- `--headless-mode` - Force headless browser `on`, `off`, or `auto`
 
 ### Python API Configuration
 ```python
